@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>售價計算器（新增清除輸入按鈕）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .calculator {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        .calculator h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333333;
+        }
+        .calculator label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #555555;
+        }
+        .calculator input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .calculator input[type="number"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .calculator button {
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin: 5px 0;
+            width: 100%;
+        }
+        .calculator button:hover {
+            background-color: #0056b3;
+        }
+        .calculator button.clear-input {
+            background-color: #6c757d;
+        }
+        .calculator button.clear-input:hover {
+            background-color: #5a6268;
+        }
+        .calculator .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 18px;
+            color: #333333;
+        }
+        .calculator .history {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+        }
+        .calculator .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .calculator .history-header h3 {
+            margin: 0;
+            color: #333333;
+        }
+        .calculator .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eeeeee;
+        }
+        .calculator .history-item:last-child {
+            border-bottom: none;
+        }
+        .calculator .history-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .calculator .history-buttons button {
+            background-color: #6c757d;
+        }
+        .calculator .history-buttons button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <h2>售價計算器（新增清除輸入按鈕）</h2>
+    <label for="exchangeRate">匯率（輸入一次即可）：</label>
+    <input type="number" id="exchangeRate" placeholder="輸入匯率" step="0.01">
+
+    <label for="costPrice">進貨價：</label>
+    <input type="number" id="costPrice" placeholder="輸入進貨價" step="0.01">
+
+    <label for="shippingWeight">重量運費：</label>
+    <input type="number" id="shippingWeight" placeholder="輸入重量運費" step="0.01">
+
+    <button onclick="calculatePrice()">計算售價</button>
+    <button onclick="clearInput()" class="clear-input">清除輸入</button>
+
+    <div class="result" id="result">售價將顯示在這裡</div>
+
+    <div class="history">
+        <div class="history-header">
+            <h3>歷史記錄（共 <span id="historyCount">0</span> 筆）</h3>
+            <div class="history-buttons">
+                <button onclick="toggleHistory()" id="toggleHistoryBtn">展開記錄</button>
+                <button onclick="clearHistory()">清空記錄</button>
+                <button onclick="exportToCSV()">導出 CSV</button>
+            </div>
+        </div>
+        <div id="historyItems" style="display: none;">
+            <!-- 歷史記錄內容動態生成 -->
+        </div>
+    </div>
+</div>
+
+<script>
+    let exchangeRate = null;
+    let history = JSON.parse(localStorage.getItem('priceCalculatorHistory')) || [];
+    let showHistory = false;
+
+    // 初始化時更新歷史記錄顯示
+    updateHistoryUI();
+
+    function calculatePrice() {
+        const rateInput = parseFloat(document.getElementById('exchangeRate').value);
+        if (!isNaN(rateInput)) exchangeRate = rateInput;
+
+        if (!exchangeRate) {
+            alert("請先輸入匯率！");
+            return;
+        }
+
+        const costPrice = parseFloat(document.getElementById('costPrice').value);
+        const shippingWeight = parseFloat(document.getElementById('shippingWeight').value);
+
+        if (isNaN(costPrice) || isNaN(shippingWeight)) {
+            alert("請輸入有效的進貨價和重量運費！");
+            return;
+        }
+
+        const price = ((costPrice * 1.03 / exchangeRate) + shippingWeight) * 1.3;
+        document.getElementById('result').innerText = `計算結果：${price.toFixed(2)}`;
+
+        // 保存記錄
+        history.push({
+            exchangeRate: exchangeRate,
+            costPrice: costPrice,
+            shippingWeight: shippingWeight,
+            price: price.toFixed(2),
+            timestamp: new Date().toISOString()
+        });
+
+        localStorage.setItem('priceCalculatorHistory', JSON.stringify(history));
+        updateHistoryUI();
+    }
+
+    function clearInput() {
+        // 清空進貨價和重量運費的輸入框
+        document.getElementById('costPrice').value = '';
+        document.getElementById('shippingWeight').value = '';
+    }
+
+    function updateHistoryUI() {
+        const historyItems = document.getElementById('historyItems');
+        historyItems.innerHTML = history.map((item, index) => `
+            <div class="history-item">
+                <strong>記錄 ${index + 1}:</strong><br>
+                匯率：${item.exchangeRate}<br>
+                進貨價：${item.costPrice}<br>
+                重量運費：${item.shippingWeight}<br>
+                售價：${item.price}<br>
+                <small>時間：${new Date(item.timestamp).toLocaleString()}</small>
+            </div>
+        `).join('');
+
+        document.getElementById('historyCount').innerText = history.length;
+        historyItems.style.display = showHistory ? 'block' : 'none';
+        document.getElementById('toggleHistoryBtn').innerText = showHistory ? '收起記錄' : '展開記錄';
+    }
+
+    function toggleHistory() {
+        showHistory = !showHistory;
+        updateHistoryUI();
+    }
+
+    function clearHistory() {
+        history = [];
+        localStorage.removeItem('priceCalculatorHistory');
+        updateHistoryUI();
+    }
+
+    function exportToCSV() {
+        const csvContent = "匯率,進貨價,重量運費,售價,時間\n" +
+            history.map(item => 
+                `${item.exchangeRate},${item.costPrice},${item.shippingWeight},${item.price},"${new Date(item.timestamp).toLocaleString()}"`
+            ).join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '售價計算記錄.csv';
+        a.click();
+    }
+</script>
+
+</body>
+</html>
